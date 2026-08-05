@@ -9,16 +9,30 @@ import { AddCardForm } from "./add-card-form";
 import { AiGenerateButton } from "./ai-generate-button";
 import { COLUMN_META, COLUMN_TRANSLATION_KEYS } from "./column-meta";
 
+// A thin bar showing where a dragged card would land — deliberately not a
+// live DOM reorder (see board.tsx), just a rendering hint at the drop point.
+function DropLine() {
+  return <div className="bg-primary -my-1 h-0.5 rounded-full" aria-hidden />;
+}
+
 export function Column({
   roomId,
   columnId,
   cards,
+  activeId,
   mergeTargetId,
+  mergeCandidatesActive,
+  dropIndicatorBeforeId,
 }: {
   roomId: string;
   columnId: ColumnId;
   cards: CardType[];
+  activeId: string | null;
   mergeTargetId: string | null;
+  /** True while dragging a mergeable card — every other mergeable card gets a subtle affordance. */
+  mergeCandidatesActive: boolean;
+  /** undefined: no indicator in this column. null: indicator at the end. string: before that card id. */
+  dropIndicatorBeforeId?: string | null;
 }) {
   const t = useTranslations("columns");
   const meta = COLUMN_META[columnId];
@@ -40,14 +54,20 @@ export function Column({
       <div ref={setNodeRef} className="flex min-h-[4rem] flex-1 flex-col gap-2">
         <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (
-            <CardItem
-              key={card.id}
-              card={card}
-              roomId={roomId}
-              isMergeTarget={mergeTargetId === card.id}
-            />
+            <div key={card.id} className="flex flex-col gap-2">
+              {dropIndicatorBeforeId === card.id && <DropLine />}
+              <CardItem
+                card={card}
+                roomId={roomId}
+                isMergeTarget={mergeTargetId === card.id}
+                isMergeCandidate={
+                  mergeCandidatesActive && card.id !== activeId && card.text !== null
+                }
+              />
+            </div>
           ))}
         </SortableContext>
+        {dropIndicatorBeforeId === null && <DropLine />}
       </div>
 
       <AddCardForm roomId={roomId} column={columnId} />

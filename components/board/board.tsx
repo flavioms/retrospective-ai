@@ -16,7 +16,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { COLUMNS, type Card as CardType, type ColumnId } from "@/lib/cards";
 import { useRoomBroadcast } from "@/lib/supabase/browser";
 import { moveCardAction, mergeCardsAction } from "@/app/room/[roomId]/actions";
@@ -46,15 +46,22 @@ function findColumn(id: string, items: ColumnOrder): ColumnId | null {
   return null;
 }
 
-// Dropping in the middle ~50% of a card merges; dropping near its top/bottom
+// Dropping in the middle ~60% of a card merges; dropping near its top/bottom
 // edges reorders as usual. Matches the common "drop on center to combine,
-// drop near edge to insert" convention (file managers, kanban tools).
+// drop near edge to insert" convention (file managers, kanban tools). Any
+// two visible cards can merge regardless of column.
 function isMergeZone(activeRect: ClientRect | null, overRect: ClientRect): boolean {
   if (!activeRect) return false;
   const activeCenterY = activeRect.top + activeRect.height / 2;
   const relativeY = (activeCenterY - overRect.top) / overRect.height;
-  return relativeY > 0.25 && relativeY < 0.75;
+  return relativeY > 0.2 && relativeY < 0.8;
 }
+
+// Where a dropped card would land if released right now: at the top of a
+// column (columnId as-is), before another card, or at the end of a column
+// (beforeId null). Purely a rendering hint — the DOM order isn't touched
+// until drop, so cards don't shift under the pointer mid-drag.
+type DropIndicator = { column: ColumnId; beforeId: string | null };
 
 export function Board({
   roomId,
@@ -72,6 +79,7 @@ export function Board({
   const [items, setItems] = useState<ColumnOrder>(() => groupByColumn(cards));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
   const [, startTransition] = useTransition();
 
   // Reset local drag-ordering state when fresh server data arrives (own
@@ -101,91 +109,114 @@ export function Board({
     setActiveId(String(event.active.id));
   }
 
+  // Deliberately does NOT reorder `items` live while dragging — an earlier
+  // version did, and shifting the target's position under the pointer every
+  // frame made it nearly impossible to hold still in a card's merge zone.
+  // Instead this only updates lightweight highlight state; the actual
+  // column/index change is computed once, at drop, in handleDragEnd.
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
     if (!over) {
       setMergeTargetId(null);
+      setDropIndicator(null);
       return;
     }
     const activeId = String(active.id);
     const overId = String(over.id);
+    if (activeId === overId) {
+      setMergeTargetId(null);
+      setDropIndicator(null);
+      return;
+    }
 
-    // Merge zone: hovering the center of a different, mergeable card. Both
-    // must be visible to this viewer — merging text you can't read isn't
-    // meaningful (also re-checked server-side). Skip the reorder preview
-    // below while in this zone, so the target card's position doesn't shift
-    // out from under the merge-highlight.
-    if (activeId !== overId && cardsById.has(overId)) {
+    if (cardsById.has(overId)) {
       const activeCard = cardsById.get(activeId);
-      const overCard = cardsById.get(overId);
+      const overCard = cardsById.get(overId)!;
+
+      // Merge zone: hovering the center of a different, mergeable card. Any
+      // two visible cards can merge, regardless of column — visibility is
+      // re-checked server-side regardless of what the client claims here.
       const merge = isMergeZone(active.rect.current.translated, over.rect);
-      if (merge && activeCard?.text !== null && overCard?.text !== null) {
+      if (merge && activeCard?.text !== null && overCard.text !== null) {
         setMergeTargetId(overId);
+        setDropIndicator(null);
         return;
       }
+      setMergeTargetId(null);
+
+      const activeRect = active.rect.current.translated;
+      const overCenterY = over.rect.top + over.rect.height / 2;
+      const isBefore = activeRect ? activeRect.top + activeRect.height / 2 < overCenterY : true;
+      const columnIds = items[overCard.column].filter((id) => id !== activeId);
+      if (isBefore) {
+        setDropIndicator({ column: overCard.column, beforeId: overId });
+      } else {
+        const idx = columnIds.indexOf(overId);
+        const beforeId = idx >= 0 && idx + 1 < columnIds.length ? columnIds[idx + 1] : null;
+        setDropIndicator({ column: overCard.column, beforeId });
+      }
+      return;
     }
+
     setMergeTargetId(null);
-
-    const activeColumn = findColumn(activeId, items);
-    const overColumn = findColumn(overId, items);
-    if (!activeColumn || !overColumn || activeColumn === overColumn) return;
-
-    setItems((prev) => {
-      const activeItems = prev[activeColumn];
-      const overItems = prev[overColumn];
-      const overIndex = overItems.indexOf(overId);
-      const newIndex = overIndex >= 0 ? overIndex : overItems.length;
-      return {
-        ...prev,
-        [activeColumn]: activeItems.filter((id) => id !== activeId),
-        [overColumn]: [...overItems.slice(0, newIndex), activeId, ...overItems.slice(newIndex)],
-      };
-    });
+    if ((COLUMNS as readonly string[]).includes(overId)) {
+      setDropIndicator({ column: overId as ColumnId, beforeId: null });
+    } else {
+      setDropIndicator(null);
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
     const mergeTarget = mergeTargetId;
+    const indicator = dropIndicator;
     setMergeTargetId(null);
+    setDropIndicator(null);
     if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
+    if (activeId === overId) return;
 
-    if (mergeTarget && mergeTarget === overId && activeId !== overId) {
+    if (mergeTarget && mergeTarget === overId) {
       startTransition(() => {
         mergeCardsAction(roomId, activeId, overId);
       });
       return;
     }
 
+    if (!indicator) return;
     const activeColumn = findColumn(activeId, items);
     if (!activeColumn) return;
-    const overColumn = findColumn(overId, items) ?? activeColumn;
 
-    let finalItems = items;
-    const activeIndex = items[activeColumn].indexOf(activeId);
-    const overIndex = items[overColumn].indexOf(overId);
-    if (activeColumn === overColumn && overIndex !== -1 && activeIndex !== overIndex) {
-      finalItems = {
-        ...items,
-        [activeColumn]: arrayMove(items[activeColumn], activeIndex, overIndex),
-      };
-      setItems(finalItems);
-    }
+    const { column: targetColumn, beforeId } = indicator;
+    const columnIds = items[targetColumn].filter((id) => id !== activeId);
+    const insertIndex = beforeId ? columnIds.indexOf(beforeId) : columnIds.length;
+    const prevCardId = insertIndex > 0 ? columnIds[insertIndex - 1] : null;
+    const nextCardId = beforeId;
 
-    const finalIds = finalItems[overColumn];
-    const finalIndex = finalIds.indexOf(activeId);
-    const prevCardId = finalIndex > 0 ? finalIds[finalIndex - 1] : null;
-    const nextCardId = finalIndex < finalIds.length - 1 ? finalIds[finalIndex + 1] : null;
+    const newColumnIds = [...columnIds];
+    newColumnIds.splice(insertIndex, 0, activeId);
+    setItems((prev) => ({
+      ...prev,
+      [activeColumn]:
+        activeColumn === targetColumn
+          ? newColumnIds
+          : prev[activeColumn].filter((id) => id !== activeId),
+      [targetColumn]: newColumnIds,
+    }));
 
     startTransition(() => {
-      moveCardAction(roomId, activeId, overColumn, prevCardId, nextCardId);
+      moveCardAction(roomId, activeId, targetColumn, prevCardId, nextCardId);
     });
   }
 
   const activeCard = activeId ? cardsById.get(activeId) : null;
+  // As soon as a mergeable card starts being dragged, every other mergeable
+  // card gets a subtle "you can drop here" affordance — otherwise the only
+  // way to discover the merge zone is by accidentally landing in it.
+  const mergeCandidatesActive = activeCard?.text != null;
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -218,7 +249,10 @@ export function Board({
               roomId={roomId}
               columnId={columnId}
               cards={items[columnId].map((id) => cardsById.get(id)).filter((c) => c !== undefined)}
+              activeId={activeId}
               mergeTargetId={mergeTargetId}
+              mergeCandidatesActive={mergeCandidatesActive}
+              dropIndicatorBeforeId={dropIndicator?.column === columnId ? dropIndicator.beforeId : undefined}
             />
           ))}
         </div>

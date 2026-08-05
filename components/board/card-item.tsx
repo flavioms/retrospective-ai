@@ -214,10 +214,13 @@ export function CardItem({
   card,
   roomId,
   isMergeTarget = false,
+  isMergeCandidate = false,
 }: {
   card: CardType;
   roomId: string;
   isMergeTarget?: boolean;
+  /** A valid merge drop target for the card currently being dragged, but not the one under the pointer right now — shown as a lighter affordance than isMergeTarget. */
+  isMergeCandidate?: boolean;
 }) {
   const t = useTranslations("card");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -237,6 +240,7 @@ export function CardItem({
       className={cn(
         "bg-card text-card-foreground rounded-md border p-3 shadow-sm transition-shadow",
         isMergeTarget && "ring-primary ring-2 ring-offset-2",
+        !isMergeTarget && isMergeCandidate && "border-primary/50 border-dashed",
       )}
     >
       {isMergeTarget && (
