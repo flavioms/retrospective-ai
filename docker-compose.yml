@@ -1,0 +1,63 @@
+name: ai-retrospective
+
+# Local development only. Two services: Postgres (app data) and Supabase
+# Realtime (broadcast channel for live board updates). We deliberately skip
+# the rest of the Supabase stack (Auth, Storage, Kong, Studio) since this app
+# doesn't use them — see docs/ARCHITECTURE.md.
+#
+# The `db` service and realtime env vars mirror Supabase's official
+# self-hosting compose (supabase/supabase docker/docker-compose.yml), trimmed
+# to what this app needs. The JWT_SECRET/ANON_KEY pair below is Supabase's
+# well-known public local-dev demo pair — fine for local Docker only, never
+# use it for a deployed environment.
+
+services:
+  db:
+    image: supabase/postgres:17.6.1.136
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+      JWT_EXP: "3600"
+    ports:
+      - "54322:5432"
+    volumes:
+      - ./supabase/local-init/01-realtime-schema.sql:/docker-entrypoint-initdb.d/01-realtime-schema.sql:ro
+      - ./supabase/migrations/0001_init.sql:/docker-entrypoint-initdb.d/02-app-schema.sql:ro
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  realtime:
+    image: supabase/realtime:v2.34.47
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: supabase_admin
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
+      DB_ENC_KEY: supabaserealtime
+      API_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+      SECRET_KEY_BASE: UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3gZv1/u2oq
+      METRICS_JWT_SECRET: your-super-secret-jwt-token-with-at-least-32-characters-long
+      ERL_AFLAGS: "-proto_dist inet_tcp"
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      APP_NAME: realtime
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
+    ports:
+      - "4000:4000"
+
+volumes:
+  db-data:
