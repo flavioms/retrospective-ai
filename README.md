@@ -9,6 +9,7 @@ cards).
 - **Product scope**: see [docs/PRD.md](docs/PRD.md).
 - **Architecture & data model**: see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and
   [docs/DATA_MODEL.md](docs/DATA_MODEL.md).
+- **Security**: see [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Stack
 

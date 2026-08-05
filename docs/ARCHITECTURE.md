@@ -1,5 +1,8 @@
 # Architecture
 
+> Security posture, threat model, and mitigations (prompt injection, RLS, secrets, rate
+> limiting) live in [SECURITY.md](SECURITY.md) — read it alongside this doc, not instead of it.
+
 ## Stack
 
 | Concern     | Choice                                                                      |
@@ -28,6 +31,12 @@ This is the anonymous per-device model EasyRetro-style tools use. `device_id` is
 verified identity — it's just a client-held cookie — which is why authorization for the
 hidden-card rule happens server-side (see below), not via database row-level security keyed on
 a trusted principal.
+
+Because `device_id` is a bearer-token-like value (whoever holds it acts as that participant,
+in every room that browser has joined), it's never sent to the client for anyone other than the
+request's own cookie owner — the `Card` type shared with the browser carries only the
+server-computed `isOwn` boolean, never a raw `authorDeviceId`. See
+[SECURITY.md](SECURITY.md#identity--impersonation) for why this matters and what was fixed.
 
 ## Data flow & the hidden-card rule
 
@@ -66,17 +75,24 @@ See `lib/supabase/browser.ts`.
 
 - `openrouter.ts` — chat completions client. Model comes from `OPENROUTER_MODELS`, a
   comma-separated fallback list (env var) — free-tier model availability on OpenRouter shifts
-  over time, so nothing is hardcoded to a single model name.
-- `prompts.ts` — builds requests using the JSON prompt pattern (structured object: role,
-  agile-facilitation instructions, input items, strict output schema) and instructs the model
-  to answer **in the same language as the input cards**, independent of UI locale.
+  over time, so nothing is hardcoded to a single model name. Requests are sent with a low
+  `temperature` (0.3) — these are structured-extraction tasks, not creative writing, and lower
+  sampling variance measurably improved instruction-following consistency (e.g. matching the
+  input's language) in live testing against free-tier models.
+- `prompts.ts` — builds requests using the JSON prompt pattern (structured object: role, retro
+  ceremony context, agile-facilitation instructions, input items, strict output schema) and
+  instructs the model to answer **in the same language as the input cards**, independent of UI
+  locale. Includes layered prompt-injection defenses — see
+  [SECURITY.md](SECURITY.md#prompt-injection-ai-features).
 - `schemas.ts` — `zod` schemas validating the model's JSON response, with one
   retry-with-repair-instructions pass on parse failure.
 
 Two call sites: the Action Items "AI Generation" button (reads all `to_improve` cards
 server-side, inserts suggestions as normal editable `action_items` cards with
 `ai_generated = true`), and the idea-helper compose assist (rewrites a rough note into a
-clear card-text suggestion).
+clear card-text suggestion). Both are rate-limited and validate room membership server-side —
+see [SECURITY.md](SECURITY.md#prompt-injection-ai-features) for the prompt-injection defenses
+and abuse guardrails.
 
 ## PDF export
 

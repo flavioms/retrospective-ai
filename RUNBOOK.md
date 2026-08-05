@@ -88,8 +88,8 @@ npm start
 
 ## Deploying
 
-1. Create a Supabase project (free tier) for the production database. Run
-   `supabase/migrations/0001_init.sql` against it (Supabase Studio SQL editor, or `psql`).
+1. Create a Supabase project (free tier) for the production database. Run every file in
+   `supabase/migrations/` against it, in filename order (Supabase Studio SQL editor, or `psql`).
 2. Create a Vercel project from this repo.
 3. Set environment variables in Vercel (Project Settings → Environment Variables), mirroring
    `.env.local.example` but pointed at the Supabase project instead of Docker:
