@@ -1,5 +1,5 @@
 import "server-only";
-import { query, queryOne } from "./client";
+import { query, queryOne, withTransaction } from "./client";
 import { positionBetween } from "./position";
 import { getReactionsForCards } from "./reactions";
 import { type Card, type ColumnId, type ReactionSummary } from "../cards";
@@ -15,6 +15,7 @@ type CardRow = {
   author_display_name: string;
   position: number;
   ai_generated: boolean;
+  owner_name: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -38,6 +39,7 @@ function mapCard(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     reactions,
+    ownerName: row.owner_name,
   };
 }
 
@@ -120,6 +122,21 @@ export async function deleteCard(cardId: string, authorDeviceId: string): Promis
 }
 
 /**
+ * Sets (or clears, with `null`) an Action Item's owner. Open to any
+ * participant, not just the card's author — deciding who's responsible for
+ * an action is a team/facilitator call, not the original writer's alone,
+ * matching how `moveCard` already treats board organization as shared.
+ * No-ops silently on non-Action-Items cards (matches the DB check constraint).
+ */
+export async function setCardOwner(cardId: string, ownerName: string | null): Promise<void> {
+  await query(
+    `update cards set owner_name = $1, updated_at = now()
+     where id = $2 and "column" = 'action_items'`,
+    [ownerName, cardId],
+  );
+}
+
+/**
  * Moves a card to a column at a position between the given neighbors' ids
  * (either may be omitted at a boundary). Any participant may move any card —
  * board organization is treated as a shared, collaborative action, not
@@ -145,4 +162,61 @@ export async function moveCard(
     position,
     cardId,
   ]);
+}
+
+// Generous cap on merged text — bigger than the normal 2000-char per-card
+// limit (merging two full-length cards can exceed it), but still bounded so
+// repeated merges can't grow a card without limit.
+const MAX_MERGED_TEXT_LENGTH = 4000;
+
+/**
+ * Drag-to-merge: combines `sourceCardId`'s text into `targetCardId`
+ * (target's text first, then source's, separated by a line break) and
+ * deletes the source. Keeps the target's column, position, author, and
+ * AI-generated flag — the source's authorship is not preserved, matching
+ * the simple "one card absorbs another" mental model rather than tracking
+ * multiple authors per card.
+ *
+ * Both cards must be visible to `viewerDeviceId` (own card, or room
+ * revealed) — merging text you can't read isn't a sensible action, and
+ * this is re-derived server-side rather than trusted from the client.
+ * Runs in a transaction so a failure between the two writes can't leave a
+ * duplicated card behind.
+ */
+export async function mergeCards(
+  sourceCardId: string,
+  targetCardId: string,
+  viewerDeviceId: string,
+): Promise<void> {
+  if (sourceCardId === targetCardId) return;
+
+  await withTransaction(async (tx) => {
+    type Row = CardRow & { cards_revealed: boolean };
+    const [source, target] = await Promise.all([
+      tx.queryOne<Row>(
+        `select c.*, r.cards_revealed
+         from cards c join rooms r on r.id = c.room_id
+         where c.id = $1`,
+        [sourceCardId],
+      ),
+      tx.queryOne<Row>(
+        `select c.*, r.cards_revealed
+         from cards c join rooms r on r.id = c.room_id
+         where c.id = $1`,
+        [targetCardId],
+      ),
+    ]);
+    if (!source || !target || source.room_id !== target.room_id) return;
+
+    const sourceVisible = source.author_device_id === viewerDeviceId || source.cards_revealed;
+    const targetVisible = target.author_device_id === viewerDeviceId || target.cards_revealed;
+    if (!sourceVisible || !targetVisible) return;
+
+    const mergedText = `${target.text}\n${source.text}`.slice(0, MAX_MERGED_TEXT_LENGTH);
+    await tx.query(`update cards set text = $1, updated_at = now() where id = $2`, [
+      mergedText,
+      targetCardId,
+    ]);
+    await tx.query(`delete from cards where id = $1`, [sourceCardId]);
+  });
 }

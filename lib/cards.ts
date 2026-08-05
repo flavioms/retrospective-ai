@@ -36,4 +36,6 @@ export type Card = {
   createdAt: string;
   updatedAt: string;
   reactions: ReactionSummary[];
+  /** Action Items only — who's responsible for executing it. Free text, not a participant FK. */
+  ownerName: string | null;
 };

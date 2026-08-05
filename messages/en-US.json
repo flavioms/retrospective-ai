@@ -36,7 +36,12 @@
     "deleteCard": "Delete card",
     "cancelEdit": "Cancel edit",
     "saveCard": "Save card",
-    "reactWith": "React with {emoji}"
+    "reactWith": "React with {emoji}",
+    "assignOwner": "Assign owner",
+    "ownerLabel": "Owner: {name}",
+    "ownerPlaceholder": "e.g. Alex",
+    "saveOwner": "Save owner",
+    "dropToMerge": "Drop to merge"
   },
   "addCard": {
     "openButton": "Add card",

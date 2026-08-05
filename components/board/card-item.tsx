@@ -4,13 +4,88 @@ import { useState, useTransition, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { EyeOff, Pencil, Sparkles, Trash2, X, Check } from "lucide-react";
+import { EyeOff, Pencil, Sparkles, Trash2, X, Check, User, Combine } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { Card as CardType } from "@/lib/cards";
-import { deleteCardAction, updateCardAction } from "@/app/room/[roomId]/actions";
+import {
+  deleteCardAction,
+  updateCardAction,
+  setCardOwnerAction,
+} from "@/app/room/[roomId]/actions";
 import { ReactionBar } from "./reaction-bar";
+
+function OwnerField({ roomId, card }: { roomId: string; card: CardType }) {
+  const t = useTranslations("card");
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(card.ownerName ?? "");
+  const [isPending, startTransition] = useTransition();
+
+  function save() {
+    startTransition(async () => {
+      await setCardOwnerAction(roomId, card.id, draft);
+      setIsEditing(false);
+    });
+  }
+
+  if (isEditing) {
+    return (
+      <div className="mt-2 flex items-center gap-1">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={t("ownerPlaceholder")}
+          className="h-6 px-1.5 text-xs"
+          autoFocus
+          maxLength={60}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              save();
+            }
+            if (e.key === "Escape") setIsEditing(false);
+          }}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={save}
+          disabled={isPending}
+          aria-label={t("saveOwner")}
+        >
+          <Check className="size-3" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => setIsEditing(false)}
+          aria-label={t("cancelEdit")}
+        >
+          <X className="size-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(card.ownerName ?? "");
+        setIsEditing(true);
+      }}
+      className="text-muted-foreground hover:text-foreground mt-2 flex items-center gap-1 rounded text-xs outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <User className="size-3" aria-hidden />
+      {card.ownerName ? t("ownerLabel", { name: card.ownerName }) : t("assignOwner")}
+    </button>
+  );
+}
 
 function CardItemContent({
   card,
@@ -96,6 +171,9 @@ function CardItemContent({
             {card.isOwn ? t("you") : card.authorDisplayName}
           </p>
         )}
+        {card.text !== null && card.column === "action_items" && (
+          <OwnerField roomId={roomId} card={card} />
+        )}
         {card.text !== null && (
           <ReactionBar roomId={roomId} cardId={card.id} reactions={card.reactions} />
         )}
@@ -132,7 +210,16 @@ function CardItemContent({
 }
 
 /** The real, draggable card rendered in a column's sortable list. */
-export function CardItem({ card, roomId }: { card: CardType; roomId: string }) {
+export function CardItem({
+  card,
+  roomId,
+  isMergeTarget = false,
+}: {
+  card: CardType;
+  roomId: string;
+  isMergeTarget?: boolean;
+}) {
+  const t = useTranslations("card");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
   });
@@ -147,8 +234,17 @@ export function CardItem({ card, roomId }: { card: CardType; roomId: string }) {
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-card text-card-foreground rounded-md border p-3 shadow-sm"
+      className={cn(
+        "bg-card text-card-foreground rounded-md border p-3 shadow-sm transition-shadow",
+        isMergeTarget && "ring-primary ring-2 ring-offset-2",
+      )}
     >
+      {isMergeTarget && (
+        <p className="text-primary mb-2 flex items-center gap-1 text-xs font-medium">
+          <Combine className="size-3.5" aria-hidden />
+          {t("dropToMerge")}
+        </p>
+      )}
       <CardItemContent
         card={card}
         roomId={roomId}

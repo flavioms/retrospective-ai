@@ -11,6 +11,7 @@ import {
   closestCenter,
   useSensor,
   useSensors,
+  type ClientRect,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -18,7 +19,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { COLUMNS, type Card as CardType, type ColumnId } from "@/lib/cards";
 import { useRoomBroadcast } from "@/lib/supabase/browser";
-import { moveCardAction } from "@/app/room/[roomId]/actions";
+import { moveCardAction, mergeCardsAction } from "@/app/room/[roomId]/actions";
 import { Column } from "./column";
 import { CardItemOverlay } from "./card-item";
 import { RevealButton } from "./reveal-button";
@@ -45,6 +46,16 @@ function findColumn(id: string, items: ColumnOrder): ColumnId | null {
   return null;
 }
 
+// Dropping in the middle ~50% of a card merges; dropping near its top/bottom
+// edges reorders as usual. Matches the common "drop on center to combine,
+// drop near edge to insert" convention (file managers, kanban tools).
+function isMergeZone(activeRect: ClientRect | null, overRect: ClientRect): boolean {
+  if (!activeRect) return false;
+  const activeCenterY = activeRect.top + activeRect.height / 2;
+  const relativeY = (activeCenterY - overRect.top) / overRect.height;
+  return relativeY > 0.25 && relativeY < 0.75;
+}
+
 export function Board({
   roomId,
   revealed,
@@ -60,6 +71,7 @@ export function Board({
   const t = useTranslations("board");
   const [items, setItems] = useState<ColumnOrder>(() => groupByColumn(cards));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   // Reset local drag-ordering state when fresh server data arrives (own
@@ -91,9 +103,28 @@ export function Board({
 
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
-    if (!over) return;
+    if (!over) {
+      setMergeTargetId(null);
+      return;
+    }
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    // Merge zone: hovering the center of a different, mergeable card. Both
+    // must be visible to this viewer — merging text you can't read isn't
+    // meaningful (also re-checked server-side). Skip the reorder preview
+    // below while in this zone, so the target card's position doesn't shift
+    // out from under the merge-highlight.
+    if (activeId !== overId && cardsById.has(overId)) {
+      const activeCard = cardsById.get(activeId);
+      const overCard = cardsById.get(overId);
+      const merge = isMergeZone(active.rect.current.translated, over.rect);
+      if (merge && activeCard?.text !== null && overCard?.text !== null) {
+        setMergeTargetId(overId);
+        return;
+      }
+    }
+    setMergeTargetId(null);
 
     const activeColumn = findColumn(activeId, items);
     const overColumn = findColumn(overId, items);
@@ -115,10 +146,20 @@ export function Board({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
+    const mergeTarget = mergeTargetId;
+    setMergeTargetId(null);
     if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    if (mergeTarget && mergeTarget === overId && activeId !== overId) {
+      startTransition(() => {
+        mergeCardsAction(roomId, activeId, overId);
+      });
+      return;
+    }
+
     const activeColumn = findColumn(activeId, items);
     if (!activeColumn) return;
     const overColumn = findColumn(overId, items) ?? activeColumn;
@@ -177,6 +218,7 @@ export function Board({
               roomId={roomId}
               columnId={columnId}
               cards={items[columnId].map((id) => cardsById.get(id)).filter((c) => c !== undefined)}
+              mergeTargetId={mergeTargetId}
             />
           ))}
         </div>

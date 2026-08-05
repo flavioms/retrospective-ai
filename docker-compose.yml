@@ -26,6 +26,7 @@ services:
       - ./supabase/local-init/01-realtime-schema.sql:/docker-entrypoint-initdb.d/01-realtime-schema.sql:ro
       - ./supabase/migrations/0001_init.sql:/docker-entrypoint-initdb.d/02-app-schema.sql:ro
       - ./supabase/migrations/0002_security_hardening.sql:/docker-entrypoint-initdb.d/03-security-hardening.sql:ro
+      - ./supabase/migrations/0003_action_item_owner.sql:/docker-entrypoint-initdb.d/04-action-item-owner.sql:ro
       - db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]

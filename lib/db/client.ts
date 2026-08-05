@@ -49,3 +49,31 @@ export async function queryOne<T extends QueryResultRow = QueryResultRow>(
   const rows = await query<T>(text, params);
   return rows[0] ?? null;
 }
+
+export type TxQuery = {
+  query: typeof query;
+  queryOne: typeof queryOne;
+};
+
+/** Runs `fn` inside a BEGIN/COMMIT, rolling back on any thrown error. */
+export async function withTransaction<T>(fn: (tx: TxQuery) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  const tx: TxQuery = {
+    query: async (text, params = []) => (await client.query(text, params)).rows,
+    queryOne: async (text, params = []) => {
+      const result = await client.query(text, params);
+      return result.rows[0] ?? null;
+    },
+  };
+  try {
+    await client.query("BEGIN");
+    const result = await fn(tx);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}

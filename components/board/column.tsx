@@ -13,10 +13,12 @@ export function Column({
   roomId,
   columnId,
   cards,
+  mergeTargetId,
 }: {
   roomId: string;
   columnId: ColumnId;
   cards: CardType[];
+  mergeTargetId: string | null;
 }) {
   const t = useTranslations("columns");
   const meta = COLUMN_META[columnId];
@@ -38,7 +40,12 @@ export function Column({
       <div ref={setNodeRef} className="flex min-h-[4rem] flex-1 flex-col gap-2">
         <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (
-            <CardItem key={card.id} card={card} roomId={roomId} />
+            <CardItem
+              key={card.id}
+              card={card}
+              roomId={roomId}
+              isMergeTarget={mergeTargetId === card.id}
+            />
           ))}
         </SortableContext>
       </div>

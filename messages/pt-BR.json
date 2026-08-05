@@ -36,7 +36,12 @@
     "deleteCard": "Excluir card",
     "cancelEdit": "Cancelar edição",
     "saveCard": "Salvar card",
-    "reactWith": "Reagir com {emoji}"
+    "reactWith": "Reagir com {emoji}",
+    "assignOwner": "Definir responsável",
+    "ownerLabel": "Responsável: {name}",
+    "ownerPlaceholder": "ex.: Alex",
+    "saveOwner": "Salvar responsável",
+    "dropToMerge": "Solte para mesclar"
   },
   "addCard": {
     "openButton": "Adicionar card",

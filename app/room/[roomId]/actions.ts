@@ -10,6 +10,8 @@ import {
   updateCardText,
   deleteCard,
   moveCard,
+  mergeCards,
+  setCardOwner,
   listCardTexts,
   type ColumnId,
 } from "@/lib/db/cards";
@@ -78,6 +80,26 @@ export async function moveCardAction(
   nextCardId: string | null,
 ): Promise<void> {
   await moveCard(cardId, toColumn, prevCardId, nextCardId);
+  await afterMutation(roomId);
+}
+
+export async function mergeCardsAction(
+  roomId: string,
+  sourceCardId: string,
+  targetCardId: string,
+): Promise<void> {
+  const deviceId = await getOrCreateDeviceId();
+  await mergeCards(sourceCardId, targetCardId, deviceId);
+  await afterMutation(roomId);
+}
+
+export async function setCardOwnerAction(
+  roomId: string,
+  cardId: string,
+  ownerName: string,
+): Promise<void> {
+  const trimmed = ownerName.trim().slice(0, 60);
+  await setCardOwner(cardId, trimmed || null);
   await afterMutation(roomId);
 }
 
