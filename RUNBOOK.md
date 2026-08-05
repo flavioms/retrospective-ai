@@ -3,13 +3,29 @@
 Step-by-step for running AI Retrospective locally, and for deploying it. Written assuming no
 prior context on this project.
 
-> **Known limitation:** the `docker-compose.yml` in this repo was assembled by mirroring
-> Supabase's own official self-hosting compose file (trimmed to just Postgres + Realtime,
-> since this app doesn't use Supabase Auth/Storage), not by test-running it end to end — Docker
-> wasn't available in the environment this project was scaffolded in. Treat your first
-> `docker compose up` as the real verification step; if something's off, check the `realtime`
-> container logs first (`docker compose logs realtime`) — most self-host Realtime issues are a
-> mismatched `DB_USER`/`API_JWT_SECRET`/`DB_ENC_KEY` between the `db` and `realtime` services.
+> **Known limitation:** Docker wasn't available in the environment this project was scaffolded
+> in, so the app's core flow (create/join a room, add/edit/delete/move cards, hidden-until-
+> revealed masking, reveal-all) was verified end-to-end against a real local Postgres instead —
+> confirmed working, including drag-and-drop persisting correctly. What's _not_ yet verified by
+> execution is the `docker-compose.yml` file itself and the Realtime broadcast path specifically
+> (the "another tab updates live" behavior) — the compose file was assembled by mirroring
+> Supabase's own official self-hosting compose (trimmed to just Postgres + Realtime, since this
+> app doesn't use Supabase Auth/Storage), but never run. The app degrades gracefully without it
+> (a failed broadcast is caught and logged, not thrown — see `lib/supabase/broadcast.ts`), so
+> this only affects live cross-tab updates, not core functionality. Treat your first
+> `docker compose up` as the real verification step for that piece; if something's off, check
+> the `realtime` container logs first (`docker compose logs realtime`) — most self-host Realtime
+> issues are a mismatched `DB_USER`/`API_JWT_SECRET`/`DB_ENC_KEY` between the `db` and `realtime`
+> services.
+>
+> Reactions and the AI features (Action Items generation, idea helper) were also verified
+> end-to-end against the real Postgres instance, including their error paths (no
+> `OPENROUTER_API_KEY` configured, no "To Improve" cards yet) — confirmed they fail gracefully
+> with a toast rather than crashing. The actual AI happy path (a real OpenRouter response) was
+> **not** verified, since no API key was available in that environment — the JSON-prompt
+> building, response parsing, and one-retry repair logic in `lib/ai/generate.ts` are code-reviewed
+> but unexercised against a live model. Set `OPENROUTER_API_KEY` and try both features as your
+> first real check.
 
 ## Prerequisites
 
