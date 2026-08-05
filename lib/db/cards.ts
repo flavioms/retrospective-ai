@@ -59,6 +59,12 @@ export async function listCardsMasked(
   );
 }
 
+// Soft anti-abuse cap, not a hard security boundary: bounds a room's worst-
+// case growth (and, transitively, AI prompt size and PDF export size) from
+// someone spamming card creation. A small TOCTOU race under concurrent
+// requests is acceptable here.
+const MAX_CARDS_PER_ROOM = 500;
+
 export async function createCard(
   roomId: string,
   column: ColumnId,
@@ -67,6 +73,12 @@ export async function createCard(
   authorDisplayName: string,
   aiGenerated = false,
 ): Promise<void> {
+  const countRow = await queryOne<{ count: number }>(
+    `select count(*)::int as count from cards where room_id = $1`,
+    [roomId],
+  );
+  if ((countRow?.count ?? 0) >= MAX_CARDS_PER_ROOM) return;
+
   const last = await queryOne<{ position: number }>(
     `select position from cards where room_id = $1 and "column" = $2 order by position desc limit 1`,
     [roomId, column],

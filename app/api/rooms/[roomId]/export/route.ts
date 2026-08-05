@@ -4,9 +4,13 @@ import { getRoom } from "@/lib/db/rooms";
 import { listCardsMasked } from "@/lib/db/cards";
 import { getOrCreateDeviceId } from "@/lib/identity/device";
 import { buildRetroReport } from "@/lib/pdf/report";
+import { isValidUuid } from "@/lib/validation";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = await params;
+  if (!isValidUuid(roomId)) {
+    return NextResponse.json({ error: "Room not found" }, { status: 404 });
+  }
 
   const room = await getRoom(roomId);
   if (!room) {

@@ -4,12 +4,28 @@ declare global {
   var __pgPool: Pool | undefined;
 }
 
+function isLocalHost(connectionString: string): boolean {
+  try {
+    const { hostname } = new URL(connectionString);
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
 function createPool(): Pool {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set");
   }
-  return new Pool({ connectionString });
+  return new Pool({
+    connectionString,
+    // Supabase (and most managed Postgres) requires TLS; local Docker
+    // Postgres has no TLS listener. rejectUnauthorized: false accepts
+    // Supabase's cert chain without bundling their CA — the connection is
+    // still encrypted, just not certificate-pinned.
+    ssl: isLocalHost(connectionString) ? undefined : { rejectUnauthorized: false },
+  });
 }
 
 // Reused across hot reloads / server action invocations in the same process.
