@@ -37,7 +37,11 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
           "HTTP-Referer": "https://github.com/",
           "X-Title": "AI Retrospective",
         },
-        body: JSON.stringify({ model, messages }),
+        // Low temperature: these are structured-extraction tasks (strict
+        // JSON, language-matching), not creative writing — lower sampling
+        // variance measurably improves instruction-following consistency
+        // on free-tier models without producing degenerate/repetitive output.
+        body: JSON.stringify({ model, messages, temperature: 0.3 }),
       });
 
       if (!response.ok) {
