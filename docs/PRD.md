@@ -44,9 +44,11 @@ written in, independent of the viewer's UI language.
 
 ### Idea helper (compose assist)
 
-Next to the card composer, an optional assistive input: a user types a rough, informal thought
-and gets back a clear, constructive, well-formatted card-text suggestion they can accept or
-discard. Purpose: lower the bar for hesitant/shy contributors to phrase feedback well.
+A "Help me phrase this" action on the card composer: a user types a rough, informal thought
+into the same textarea they'd use for the card, then rewrites it in place into a clear,
+constructive, well-formatted suggestion they can keep editing before submitting. One input, not
+a separate side panel — purpose: lower the bar for hesitant/shy contributors to phrase feedback
+well without adding a second field to fill in.
 
 ### Export
 
