@@ -49,3 +49,21 @@ export async function upsertParticipant(
   );
   return mapParticipant(row as ParticipantRow);
 }
+
+/**
+ * Atomic check-and-set 5-second cooldown for the AI Server Actions: a single
+ * UPDATE ... WHERE ... RETURNING can't race the way a separate
+ * read-then-write check could, so two concurrent calls can't both pass.
+ */
+export async function tryConsumeAiRateLimit(roomId: string, deviceId: string): Promise<boolean> {
+  const row = await queryOne<{ ok: boolean }>(
+    `update participants
+     set last_ai_call_at = now()
+     where room_id = $1
+       and device_id = $2
+       and (last_ai_call_at is null or last_ai_call_at < now() - interval '5 seconds')
+     returning true as ok`,
+    [roomId, deviceId],
+  );
+  return row?.ok ?? false;
+}

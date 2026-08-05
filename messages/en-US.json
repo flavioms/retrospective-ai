@@ -51,7 +51,8 @@
     "noToImproveCards": "Add some \"To Improve\" cards first.",
     "aiGenerationFailed": "AI generation failed. Try again in a moment.",
     "writeRoughNoteFirst": "Write a rough note first.",
-    "aiRewriteFailed": "AI rewrite failed. Try again in a moment."
+    "aiRewriteFailed": "AI rewrite failed. Try again in a moment.",
+    "aiRateLimited": "You're doing that a bit fast — wait a few seconds and try again."
   },
   "locale": {
     "toggleLabel": "Language"

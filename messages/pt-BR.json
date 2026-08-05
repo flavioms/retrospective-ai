@@ -51,7 +51,8 @@
     "noToImproveCards": "Adicione alguns cards em \"A Melhorar\" primeiro.",
     "aiGenerationFailed": "Falha na geração por IA. Tente novamente em instantes.",
     "writeRoughNoteFirst": "Escreva uma nota antes.",
-    "aiRewriteFailed": "Falha ao reformular com IA. Tente novamente em instantes."
+    "aiRewriteFailed": "Falha ao reformular com IA. Tente novamente em instantes.",
+    "aiRateLimited": "Você está fazendo isso rápido demais — espere alguns segundos e tente novamente."
   },
   "locale": {
     "toggleLabel": "Idioma"

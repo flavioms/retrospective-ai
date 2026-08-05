@@ -39,7 +39,7 @@ export function AddCardForm({ roomId, column }: { roomId: string; column: Column
   function rewrite() {
     if (!text.trim()) return;
     startRewriting(async () => {
-      const result = await generateIdeaHelperAction(text);
+      const result = await generateIdeaHelperAction(roomId, text);
       if (!result.ok) {
         toast.error(result.error);
         return;

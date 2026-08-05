@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { getOrCreateDeviceId } from "@/lib/identity/device";
-import { getParticipant, upsertParticipant } from "@/lib/db/participants";
+import { getParticipant, upsertParticipant, tryConsumeAiRateLimit } from "@/lib/db/participants";
 import { touchRoom, revealRoom } from "@/lib/db/rooms";
 import {
   createCard,
@@ -101,13 +101,20 @@ export async function revealRoomAction(roomId: string): Promise<void> {
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+// Bounds the prompt sent to the model — a room could in principle accumulate
+// far more "To Improve" cards than are useful to summarize in one pass.
+const MAX_NOTES_PER_GENERATION = 60;
+
 export async function generateActionItemsAction(roomId: string): Promise<ActionResult> {
   const t = await getTranslations("errors");
   const deviceId = await getOrCreateDeviceId();
   const participant = await getParticipant(roomId, deviceId);
   if (!participant) return { ok: false, error: t("joinFirst") };
 
-  const notes = await listCardTexts(roomId, "to_improve");
+  const allowed = await tryConsumeAiRateLimit(roomId, deviceId);
+  if (!allowed) return { ok: false, error: t("aiRateLimited") };
+
+  const notes = (await listCardTexts(roomId, "to_improve")).slice(0, MAX_NOTES_PER_GENERATION);
   if (notes.length === 0) {
     return { ok: false, error: t("noToImproveCards") };
   }
@@ -133,11 +140,19 @@ export async function generateActionItemsAction(roomId: string): Promise<ActionR
 }
 
 export async function generateIdeaHelperAction(
+  roomId: string,
   roughNote: string,
 ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
   const t = await getTranslations("errors");
-  const trimmed = roughNote.trim();
+  const deviceId = await getOrCreateDeviceId();
+  const participant = await getParticipant(roomId, deviceId);
+  if (!participant) return { ok: false, error: t("joinFirst") };
+
+  const trimmed = roughNote.trim().slice(0, 2000);
   if (!trimmed) return { ok: false, error: t("writeRoughNoteFirst") };
+
+  const allowed = await tryConsumeAiRateLimit(roomId, deviceId);
+  if (!allowed) return { ok: false, error: t("aiRateLimited") };
 
   try {
     const result = await generateJson(ideaHelperSchema, buildIdeaHelperPrompt(trimmed));
