@@ -31,7 +31,6 @@ function mapCard(
     roomId: row.room_id,
     column: row.column,
     text: isOwn || revealed ? row.text : null,
-    authorDeviceId: row.author_device_id,
     authorDisplayName: row.author_display_name,
     position: row.position,
     aiGenerated: row.ai_generated,
