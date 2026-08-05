@@ -170,18 +170,20 @@ export async function moveCard(
 const MAX_MERGED_TEXT_LENGTH = 4000;
 
 /**
- * Drag-to-merge: combines `sourceCardId`'s text into `targetCardId`
- * (target's text first, then source's, separated by a line break) and
- * deletes the source. Keeps the target's column, position, author, and
- * AI-generated flag — the source's authorship is not preserved, matching
- * the simple "one card absorbs another" mental model rather than tracking
- * multiple authors per card.
+ * Drag-to-merge: combines `sourceCardId` into `targetCardId` — text (target
+ * first, then source, separated by a line break), author attribution (both
+ * names, deduped if the same person wrote both), and reactions (unioned,
+ * so a reaction either card already had survives) — and deletes the
+ * source. Keeps the target's column, position, and AI-generated flag;
+ * columns need not match, so this also merges cards across columns.
+ * `author_device_id` stays the target's, so edit/delete rights follow the
+ * target's original author rather than trying to track joint ownership.
  *
  * Both cards must be visible to `viewerDeviceId` (own card, or room
  * revealed) — merging text you can't read isn't a sensible action, and
  * this is re-derived server-side rather than trusted from the client.
- * Runs in a transaction so a failure between the two writes can't leave a
- * duplicated card behind.
+ * Runs in a transaction so a failure partway through can't leave a
+ * duplicated card or orphaned reactions behind.
  */
 export async function mergeCards(
   sourceCardId: string,
@@ -213,10 +215,21 @@ export async function mergeCards(
     if (!sourceVisible || !targetVisible) return;
 
     const mergedText = `${target.text}\n${source.text}`.slice(0, MAX_MERGED_TEXT_LENGTH);
-    await tx.query(`update cards set text = $1, updated_at = now() where id = $2`, [
-      mergedText,
-      targetCardId,
-    ]);
+    const mergedAuthorName =
+      target.author_display_name === source.author_display_name
+        ? target.author_display_name
+        : `${target.author_display_name} & ${source.author_display_name}`;
+
+    await tx.query(
+      `update cards set text = $1, author_display_name = $2, updated_at = now() where id = $3`,
+      [mergedText, mergedAuthorName, targetCardId],
+    );
+    await tx.query(
+      `insert into reactions (card_id, device_id, emoji)
+       select $1, device_id, emoji from reactions where card_id = $2
+       on conflict (card_id, device_id, emoji) do nothing`,
+      [targetCardId, sourceCardId],
+    );
     await tx.query(`delete from cards where id = $1`, [sourceCardId]);
   });
 }
