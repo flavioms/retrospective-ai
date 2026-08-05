@@ -1,0 +1,59 @@
+{
+  "landing": {
+    "title": "AI Retrospective",
+    "description": "Conduza uma retrospectiva de sprint com seu time: O Que Foi Bem, A Melhorar, Itens de Ação. Os cards ficam privados até que todos estejam prontos para revelar.",
+    "createRoom": "Criar uma sala"
+  },
+  "join": {
+    "title": "Participar desta retrospectiva",
+    "description": "Escolha um nome de exibição. Ele só aparece ao lado dos cards que você escrever, depois de revelados.",
+    "displayNameLabel": "Nome de exibição",
+    "displayNamePlaceholder": "ex.: Alex",
+    "submit": "Entrar na sala"
+  },
+  "board": {
+    "title": "Retrospectiva",
+    "youAreIn": "Você entrou como {name}",
+    "copyLink": "Copiar link de convite",
+    "linkCopied": "Link copiado",
+    "exportPdf": "Exportar PDF",
+    "exportDisabledHint": "Revele todos os cards primeiro — a exportação, do contrário, omitiria o texto dos cards ocultos.",
+    "reveal": "Revelar todos os cards",
+    "aiGeneration": "Geração por IA",
+    "aiGenerationHint": "Lê todas as notas de \"A Melhorar\", incluindo as que ainda estão ocultas para você, e sugere Itens de Ação. Você pode editar ou excluir qualquer sugestão depois."
+  },
+  "columns": {
+    "wentWell": "O Que Foi Bem",
+    "toImprove": "A Melhorar",
+    "actionItems": "Itens de Ação"
+  },
+  "card": {
+    "dragHandle": "Arrastar para reordenar ou mover para outra coluna",
+    "hidden": "Oculto até ser revelado",
+    "aiSuggested": "Sugerido por IA",
+    "you": "Você",
+    "editCard": "Editar card",
+    "deleteCard": "Excluir card",
+    "cancelEdit": "Cancelar edição",
+    "saveCard": "Salvar card",
+    "reactWith": "Reagir com {emoji}"
+  },
+  "addCard": {
+    "openButton": "Adicionar card",
+    "placeholder": "Escreva um card…",
+    "helpMePhrase": "Me ajude a formular isso",
+    "rewriting": "Reformulando…",
+    "cancel": "Cancelar",
+    "submit": "Adicionar"
+  },
+  "errors": {
+    "joinFirst": "Entre na sala antes de gerar sugestões.",
+    "noToImproveCards": "Adicione alguns cards em \"A Melhorar\" primeiro.",
+    "aiGenerationFailed": "Falha na geração por IA. Tente novamente em instantes.",
+    "writeRoughNoteFirst": "Escreva uma nota antes.",
+    "aiRewriteFailed": "Falha ao reformular com IA. Tente novamente em instantes."
+  },
+  "locale": {
+    "toggleLabel": "Idioma"
+  }
+}

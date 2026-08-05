@@ -1,0 +1,59 @@
+{
+  "landing": {
+    "title": "AI Retrospective",
+    "description": "Run a sprint retrospective with your team: Went Well, To Improve, Action Items. Cards stay private until everyone's ready to reveal.",
+    "createRoom": "Create a room"
+  },
+  "join": {
+    "title": "Join this retrospective",
+    "description": "Pick a display name. It's only shown next to cards you write, after they're revealed.",
+    "displayNameLabel": "Display name",
+    "displayNamePlaceholder": "e.g. Alex",
+    "submit": "Join room"
+  },
+  "board": {
+    "title": "Retrospective",
+    "youAreIn": "You're in as {name}",
+    "copyLink": "Copy invite link",
+    "linkCopied": "Link copied",
+    "exportPdf": "Export PDF",
+    "exportDisabledHint": "Reveal all cards first — export would otherwise omit hidden card text.",
+    "reveal": "Reveal all cards",
+    "aiGeneration": "AI Generation",
+    "aiGenerationHint": "Reads every \"To Improve\" note, including ones still hidden from you, and suggests Action Items. You can edit or delete any suggestion afterward."
+  },
+  "columns": {
+    "wentWell": "Went Well",
+    "toImprove": "To Improve",
+    "actionItems": "Action Items"
+  },
+  "card": {
+    "dragHandle": "Drag to reorder or move to another column",
+    "hidden": "Hidden until revealed",
+    "aiSuggested": "AI suggested",
+    "you": "You",
+    "editCard": "Edit card",
+    "deleteCard": "Delete card",
+    "cancelEdit": "Cancel edit",
+    "saveCard": "Save card",
+    "reactWith": "React with {emoji}"
+  },
+  "addCard": {
+    "openButton": "Add card",
+    "placeholder": "Write a card…",
+    "helpMePhrase": "Help me phrase this",
+    "rewriting": "Rewriting…",
+    "cancel": "Cancel",
+    "submit": "Add"
+  },
+  "errors": {
+    "joinFirst": "Join the room before generating suggestions.",
+    "noToImproveCards": "Add some \"To Improve\" cards first.",
+    "aiGenerationFailed": "AI generation failed. Try again in a moment.",
+    "writeRoughNoteFirst": "Write a rough note first.",
+    "aiRewriteFailed": "AI rewrite failed. Try again in a moment."
+  },
+  "locale": {
+    "toggleLabel": "Language"
+  }
+}
