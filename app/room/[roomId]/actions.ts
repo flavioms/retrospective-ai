@@ -118,7 +118,7 @@ export async function generateActionItemsAction(roomId: string): Promise<ActionR
       await createCard(
         roomId,
         "action_items",
-        suggestion.text.slice(0, 2000),
+        suggestion.slice(0, 2000),
         deviceId,
         participant.displayName,
         true,

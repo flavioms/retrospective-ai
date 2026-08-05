@@ -26,7 +26,7 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
     throw new Error("OPENROUTER_MODELS is not configured");
   }
 
-  let lastError: unknown;
+  const failures: string[] = [];
   for (const model of models) {
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -41,21 +41,22 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
       });
 
       if (!response.ok) {
-        lastError = new Error(`OpenRouter ${model} responded ${response.status}`);
+        const body = await response.text();
+        failures.push(`${model}: HTTP ${response.status} — ${body.slice(0, 300)}`);
         continue;
       }
 
       const data = await response.json();
       const content = data?.choices?.[0]?.message?.content;
       if (typeof content !== "string" || !content.trim()) {
-        lastError = new Error(`OpenRouter ${model} returned an empty response`);
+        failures.push(`${model}: empty response`);
         continue;
       }
       return content;
     } catch (error) {
-      lastError = error;
+      failures.push(`${model}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error("All OpenRouter models failed");
+  throw new Error(`All OpenRouter models failed:\n${failures.join("\n")}`);
 }

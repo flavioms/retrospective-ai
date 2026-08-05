@@ -22,7 +22,7 @@ export function buildActionItemsPrompt(toImproveTexts: string[]): ChatMessage[] 
       ...COMMON_INSTRUCTIONS,
     ],
     input: { to_improve_notes: toImproveTexts },
-    output_schema: { suggestions: [{ text: "string" }] },
+    output_schema: { suggestions: ["string", "string"] },
   };
   return [SYSTEM_MESSAGE, { role: "user", content: JSON.stringify(prompt) }];
 }
