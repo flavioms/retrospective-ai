@@ -56,6 +56,26 @@ actual authorization boundary is the Server Action layer:
   directly to Postgres Changes with the anon key) would require trusting the client-supplied
   `device_id` inside an RLS policy, which is spoofable.
 
+## Board interactions: move, merge, owner assignment
+
+Drag-and-drop (`@dnd-kit`) drives three distinct outcomes from the same gesture, disambiguated
+by where within the target card the pointer is released:
+
+- **Reorder / move column**: dropping near a card's top or bottom edge (outside the middle
+  25%–75% band of its height) inserts the dragged card before/after it, calling `moveCardAction`.
+- **Merge**: dropping on the middle 25%–75% band of a *different* card (`isMergeZone` in
+  `components/board/board.tsx`) combines the two, calling `mergeCardsAction`. Both cards must
+  currently show text (not hidden pre-reveal) — the client hides the merge-highlight otherwise,
+  and `mergeCards` (`lib/db/cards.ts`) re-derives visibility server-side rather than trusting the
+  client. The merge runs in a Postgres transaction (`withTransaction`, `lib/db/client.ts`) so a
+  crash between updating the target and deleting the source can't leave a duplicate behind.
+- **Owner assignment**: unrelated to drag-and-drop — an inline-editable field shown only on
+  Action Items cards (`OwnerField` in `components/board/card-item.tsx`), calling
+  `setCardOwnerAction` → `setCardOwner`. Open to any participant, not just the card's author,
+  since deciding who executes an action is a team call. Gated to the `action_items` column at
+  two independent layers: the update query's `where` clause, and a database check constraint
+  (`cards_owner_only_on_action_items`) as defense-in-depth against a bug in the first.
+
 ## Realtime transport detail (local vs prod)
 
 `@supabase/supabase-js`'s `createClient()` derives the realtime websocket path as

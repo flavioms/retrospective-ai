@@ -1,7 +1,7 @@
 # Data Model
 
 Source of truth: [`supabase/migrations/`](../supabase/migrations/) (apply in filename order —
-`0001_init.sql` then `0002_security_hardening.sql`).
+`0001_init.sql`, then `0002_security_hardening.sql`, then `0003_action_item_owner.sql`).
 
 ```
 rooms
@@ -29,7 +29,10 @@ cards
   author_display_name  text not null                     -- denormalized for display-after-reveal and PDF export
   position             double precision not null          -- fractional index, drag-and-drop ordering within a column
   ai_generated         boolean not null default false
+  owner_name           text null                          -- 0003: who's responsible; only set-able on action_items
   created_at, updated_at timestamptz not null default now()
+
+  -- 0003: check (owner_name is null or "column" = 'action_items')
 
 reactions
   id         uuid pk
@@ -57,3 +60,15 @@ reactions
   never the raw value. See [SECURITY.md](SECURITY.md#identity--impersonation).
 - Cascading deletes on `room_id`/`card_id` foreign keys mean the 30-day cleanup job only needs
   to delete from `rooms`; participants, cards, and reactions follow automatically.
+- Drag-to-merge (dropping one card onto another) combines two cards' `text` into the drop
+  target — target's text first, then the dragged card's, separated by a newline — and deletes
+  the dragged card. The target keeps its `column`, `position`, `author_device_id`, and
+  `ai_generated` flag; the merged card's own authorship is not preserved. Both cards must be
+  visible to the requester (own card, or room revealed) — re-checked server-side, not trusted
+  from the client. Runs in a transaction (`withTransaction` in `lib/db/client.ts`) so a failure
+  between the update and delete can't leave a duplicated card behind.
+- `owner_name` marks who's responsible for executing an Action Item. Any participant may set it
+  (not just the card's author), matching how `moveCard` already treats board organization as a
+  shared action. Enforced action-items-only at two layers: the `setCardOwner` query's `where`
+  clause no-ops on other columns, and the `cards_owner_only_on_action_items` check constraint
+  rejects it at the schema level as defense-in-depth.

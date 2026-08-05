@@ -30,9 +30,14 @@ A single ceremony type: a 3-column retrospective board.
 
 - Add, edit, remove cards in any column.
 - Move cards between columns (drag and drop).
+- **Merge**: dragging a card and dropping it on the center of another combines their text (on
+  separate lines) into the drop target, and removes the dragged card. Dropping near a card's
+  edge instead reorders as usual — only a center drop merges.
 - **Hidden by default**: card text is visible only to its author until a room-level "Reveal
   all cards" action is triggered. After reveal, all cards show their text and author name.
 - Reactions: a small fixed set of emoji, toggleable per participant per card.
+- **Owner assignment (Action Items only)**: any participant can set or change who's responsible
+  for executing an Action Item, tracked as a plain name next to the card.
 
 ### AI Generation (Action Items column)
 
