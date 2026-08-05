@@ -3,7 +3,6 @@
 import { useState, useTransition, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { EyeOff, Pencil, Sparkles, Trash2, X, Check, User, Combine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -223,13 +222,15 @@ export function CardItem({
   isMergeCandidate?: boolean;
 }) {
   const t = useTranslations("card");
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: card.id,
-  });
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({ id: card.id });
 
+  // Deliberately doesn't apply useSortable's `transform`/`transition` — that's
+  // what makes sibling cards slide out of the way to "make room" for the
+  // dragged card, which is exactly the shifting-under-the-cursor behavior
+  // that made merging unusable (see board.tsx). Cards stay put until the
+  // actual drop; the DragOverlay shows the dragged card following the
+  // cursor, and this card just dims in its original spot while active.
   const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition ?? undefined,
     opacity: isDragging ? 0.5 : 1,
   };
 
