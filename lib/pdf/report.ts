@@ -43,6 +43,7 @@ export function buildRetroReport(roomName: string | null, cards: Card[]) {
                 const voteCount = card.reactions.reduce((sum, r) => sum + r.count, 0);
                 const meta = [
                   card.authorDisplayName,
+                  card.ownerName ? `Owner: ${card.ownerName}` : null,
                   voteCount > 0 ? `${voteCount} reaction${voteCount === 1 ? "" : "s"}` : null,
                   card.aiGenerated ? "AI suggested" : null,
                 ]
