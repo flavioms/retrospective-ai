@@ -8,7 +8,7 @@
     "title": "Join this retrospective",
     "description": "Pick a display name. It's only shown next to cards you write, after they're revealed.",
     "displayNameLabel": "Display name",
-    "displayNamePlaceholder": "e.g. Alex",
+    "displayNamePlaceholder": "e.g. John",
     "submit": "Join room"
   },
   "board": {
@@ -39,7 +39,7 @@
     "reactWith": "React with {emoji}",
     "assignOwner": "Assign owner",
     "ownerLabel": "Owner: {name}",
-    "ownerPlaceholder": "e.g. Alex",
+    "ownerPlaceholder": "e.g. John",
     "saveOwner": "Save owner",
     "dropToMerge": "Drop to merge"
   },

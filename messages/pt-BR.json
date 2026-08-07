@@ -8,7 +8,7 @@
     "title": "Participar desta retrospectiva",
     "description": "Escolha um nome de exibição. Ele só aparece ao lado dos cards que você escrever, depois de revelados.",
     "displayNameLabel": "Nome de exibição",
-    "displayNamePlaceholder": "ex.: Alex",
+    "displayNamePlaceholder": "ex.: John",
     "submit": "Entrar na sala"
   },
   "board": {
@@ -39,7 +39,7 @@
     "reactWith": "Reagir com {emoji}",
     "assignOwner": "Definir responsável",
     "ownerLabel": "Responsável: {name}",
-    "ownerPlaceholder": "ex.: Alex",
+    "ownerPlaceholder": "ex.: John",
     "saveOwner": "Salvar responsável",
     "dropToMerge": "Solte para mesclar"
   },
