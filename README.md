@@ -6,6 +6,8 @@ export, and AI assistance for turning feedback into action items (and rough note
 cards). No accounts: joining a room only asks for a display name, and identity is tracked
 per-browser via a device cookie.
 
+https://github.com/user-attachments/assets/3bec990b-2b62-466d-b92e-1182b4b5a951
+
 ## Features
 
 - **Rooms, no login**: a room is just a UUID (`/room/{uuid}`) — the URL is the invite link.
